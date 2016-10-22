@@ -1,5 +1,6 @@
 package org.bambrikii.md.converter;
 
+import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.Page;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
@@ -58,7 +59,7 @@ public class Crawler {
 		viewStorageTransformer = new ViewStorageTransformer(hostUrl, client);
 	}
 
-	public Map<String, String> download(String url) throws IOException, TransformerException, SAXException, ParserConfigurationException {
+	private Map<String, String> download(String url) throws IOException, TransformerException, SAXException, ParserConfigurationException {
 		HtmlPage page1 = client.getPage(url);
 		String pageContent = page1.getWebResponse().getContentAsString();
 		logger.info(pageContent);
@@ -118,13 +119,17 @@ public class Crawler {
 		downloadPages2(pageLinks);
 	}
 
-	private void downloadPages(Map<String, String> pageLinks) throws IOException, TransformerException, SAXException, ParserConfigurationException {
+	public void downloadPages(Map<String, String> pageLinks) throws IOException, TransformerException, SAXException, ParserConfigurationException {
 		for (Map.Entry<String, String> entry : pageLinks.entrySet()) {
 			String pageUrl = createPageUrl(entry.getKey());
 			if (!checkProcessed(pageUrl)) {
-				Map<String, String> childPages = download(pageUrl);
-				addProcessed(pageUrl);
-				downloadPages2(childPages);
+				try {
+					Map<String, String> childPages = download(pageUrl);
+					addProcessed(pageUrl);
+					downloadPages2(childPages);
+				} catch (FailingHttpStatusCodeException ex) {
+					logger.error(ex.getMessage(), ex);
+				}
 			}
 		}
 	}
