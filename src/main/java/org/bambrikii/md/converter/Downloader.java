@@ -18,11 +18,10 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.bambrikii.md.converter.Crawler.ATTACHMENTS_PATTERN;
-import static org.bambrikii.md.converter.Crawler.PAGES_PATTERN;
 import static org.bambrikii.md.converter.ViewStorageTransformer.CHARSET_NAME;
 import static org.bambrikii.md.converter.ViewStorageTransformer.transformViewStorage;
 
@@ -30,6 +29,8 @@ import static org.bambrikii.md.converter.ViewStorageTransformer.transformViewSto
  * Created by Alexander Arakelyan on 23.10.16 21:22.
  */
 public class Downloader {
+	public static final String ATTACHMENTS_PATTERN = "\\/download\\/attachments\\/([0-9]+)\\/([^\\?]+)\\?";
+	public static final String PAGES_PATTERN = "/pages/viewpage.action\\?pageId=([0-9]+)[^\\>]+\\>([^\\<]+)\\<";
 	private static final String SPACE_PATTERN = "\\/display\\/([^\\>\"]+).*\\>([^\\<]+)\\<";
 
 	private static final Logger logger = LoggerFactory.getLogger(Downloader.class);
@@ -68,10 +69,10 @@ public class Downloader {
 		}
 
 		// List the files and download them
-		downloadAttachments(pageContent);
-		Map<String, String> pageLinks1 = parseOutPageLinks(pageContent);
 		Map<String, String> spaceLinks1 = parseOutSpaceLinks(pageContent);
-		PageLinks pageLinks = new PageLinks(pageLinks1, spaceLinks1);
+		Map<String, String> pageLinks1 = parseOutPageLinks(pageContent);
+		Map<String, String> attachmentLinks1 = parseOutAttachments(pageContent);
+		PageLinks pageLinks = new PageLinks(pageLinks1, spaceLinks1, attachmentLinks1);
 		return pageLinks;
 	}
 
@@ -96,12 +97,10 @@ public class Downloader {
 		return parseOutLinksByPattern(pageContent, SPACE_PATTERN);
 	}
 
-	private void downloadAttachments(String pageContent) throws IOException {
-		Pattern attachmentsPattern = Pattern.compile(ATTACHMENTS_PATTERN);
-		Matcher attachmentsMatcher = attachmentsPattern.matcher(pageContent);
-		while (attachmentsMatcher.find()) {
-			String id = attachmentsMatcher.group(1);
-			String name = attachmentsMatcher.group(2);
+	public void downloadAttachments(Map<String, String> attachmentLinks) throws IOException {
+		for (Entry<String, String> entry : attachmentLinks.entrySet()) {
+			String id = entry.getKey();
+			String name = entry.getValue();
 			String attachmentUrl = createAttachmentUrl(id, name);
 
 			try {
@@ -113,6 +112,10 @@ public class Downloader {
 				logger.error(ex.getMessage(), ex);
 			}
 		}
+	}
+
+	private Map<String, String> parseOutAttachments(String pageContent) throws IOException {
+		return parseOutLinksByPattern(pageContent, ATTACHMENTS_PATTERN);
 	}
 
 	private String createAttachmentUrl(String id, String name) {

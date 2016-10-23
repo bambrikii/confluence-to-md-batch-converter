@@ -22,8 +22,6 @@ import java.util.Set;
  */
 public class Crawler {
 	private static final Logger logger = LoggerFactory.getLogger(Crawler.class);
-	public static final String ATTACHMENTS_PATTERN = "\\/download\\/attachments\\/([0-9]+)\\/([^\\?]+)\\?";
-	public static final String PAGES_PATTERN = "/pages/viewpage.action\\?pageId=([0-9]+)[^\\>]+\\>([^\\<]+)\\<";
 	private URL hostUrl;
 
 	private Set<String> processedLinks = new ConcurrentHashSet<>();
@@ -67,6 +65,11 @@ public class Crawler {
 	private void download(PageLinks links) throws IOException, TransformerException, SAXException, ParserConfigurationException {
 		downloadPages(links.getPageLinks());
 		downloadSpaces(links.getSpaceLinks());
+		downloadAttachments(links.getAttachmentLinks());
+	}
+
+	private void downloadAttachments(Map<String, String> attachmentLinks) throws IOException {
+		downloader.downloadAttachments(attachmentLinks);
 	}
 
 	private void downloadSpaces(Map<String, String> spaceLinks) throws ParserConfigurationException, TransformerException, SAXException, IOException {
