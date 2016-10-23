@@ -22,22 +22,21 @@ import java.util.Set;
  */
 public class Crawler {
 	private static final Logger logger = LoggerFactory.getLogger(Crawler.class);
-	private URL hostUrl;
 
 	private Set<String> processedLinks = new ConcurrentHashSet<>();
 	private WebClient client;
 	private Downloader downloader;
 	private final String dstDir;
+	private final ConfluenceUrlBuilder urlBuilder;
 
 	public Crawler(String hostUrl, String dstDir) throws IOException {
-		this.hostUrl = new URL(hostUrl);
+		urlBuilder = new ConfluenceUrlBuilder(new URL(hostUrl));
 		this.dstDir = dstDir;
 	}
 
 	public void login(String username, String password) throws IOException {
-		URL logonUrl = new URL(hostUrl.getProtocol() + "://" + hostUrl.getAuthority() + "/login.action?logout=true");
+		URL logonUrl = new URL(urlBuilder.createLogonUrl());
 		client = new WebClient();
-		downloader = new Downloader(client, hostUrl, dstDir);
 		client.getOptions().setThrowExceptionOnScriptError(false);
 		HtmlPage page = client.getPage(logonUrl);
 		HtmlForm loginForm = page.getFormByName("loginform");
@@ -47,15 +46,14 @@ public class Crawler {
 		pwd.setValueAttribute(password);
 		HtmlInput btn = loginForm.getInputByName("login");
 		btn.click();
-	}
 
-	private String createDisplayUrl(String space) {
-		return this.hostUrl.getProtocol() + "://" + this.hostUrl.getAuthority() + "/display/" + space;
+		ViewStorageTransformer viewStorageTransformer = new ViewStorageTransformer(urlBuilder.getBaseUrl(), client);
+		downloader = new Downloader(client, viewStorageTransformer, urlBuilder, dstDir);
 	}
 
 	public void downloadSpace(String space) throws IOException, ParserConfigurationException, TransformerException, SAXException {
 		if (!processedLinks.contains(space)) {
-			String displayLink = createDisplayUrl(space);
+			String displayLink = urlBuilder.createDisplayUrl(space);
 			PageLinks links = downloader.download(displayLink);
 			processedLinks.add(space);
 			download(links);
@@ -84,7 +82,7 @@ public class Crawler {
 	}
 
 	public void downloadPage(String pageId) throws IOException, TransformerException, SAXException, ParserConfigurationException {
-		String pageUrl = createPageUrl(pageId);
+		String pageUrl = urlBuilder.createPageUrl(pageId);
 		if (!processedLinks.contains(pageId)) {
 			try {
 				PageLinks links = downloader.download(pageUrl);
@@ -104,10 +102,6 @@ public class Crawler {
 				downloadPage(pageId);
 			}
 		}
-	}
-
-	private String createPageUrl(String pageId) {
-		return this.hostUrl.getProtocol() + "://" + this.hostUrl.getAuthority() + "/pages/viewpage.action?pageId=" + pageId;
 	}
 
 }

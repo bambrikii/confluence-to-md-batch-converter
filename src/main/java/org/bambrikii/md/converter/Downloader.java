@@ -14,7 +14,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.net.URLDecoder;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -37,14 +36,14 @@ public class Downloader {
 	public static final String TREE_PAGE_ID = "treePageId";
 	private final WebClient client;
 	private final ViewStorageTransformer viewStorageTransformer;
-	private final URL hostUrl;
-	private MdPersistor persistor;
+	private final MdPersistor persistor;
+	private final ConfluenceUrlBuilder urlBuilder;
 
-	public Downloader(WebClient client, URL hostUrl, String dstDir) {
+	public Downloader(WebClient client, ViewStorageTransformer viewStorageTransformer, ConfluenceUrlBuilder urlBuilder, String dstDir) {
 		this.client = client;
-		this.hostUrl = hostUrl;
-		viewStorageTransformer = new ViewStorageTransformer(hostUrl, client);
+		this.viewStorageTransformer = viewStorageTransformer;
 		this.persistor = new MdPersistor(dstDir);
+		this.urlBuilder = urlBuilder;
 	}
 
 	PageLinks download(String url) throws IOException, TransformerException, SAXException, ParserConfigurationException {
@@ -101,7 +100,7 @@ public class Downloader {
 		for (Entry<String, String> entry : attachmentLinks.entrySet()) {
 			String id = entry.getKey();
 			String name = entry.getValue();
-			String attachmentUrl = createAttachmentUrl(id, name);
+			String attachmentUrl = urlBuilder.createAttachmentUrl(id, name);
 
 			try {
 				Page attachmentPage = client.getPage(attachmentUrl);
@@ -116,10 +115,6 @@ public class Downloader {
 
 	private Map<String, String> parseOutAttachments(String pageContent) throws IOException {
 		return parseOutLinksByPattern(pageContent, ATTACHMENTS_PATTERN);
-	}
-
-	private String createAttachmentUrl(String id, String name) {
-		return this.hostUrl.getProtocol() + "://" + this.hostUrl.getAuthority() + "/download/attachments/" + id + "/" + name;
 	}
 
 }
