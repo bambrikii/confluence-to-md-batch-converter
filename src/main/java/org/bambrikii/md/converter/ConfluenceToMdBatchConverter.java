@@ -48,6 +48,7 @@ public class ConfluenceToMdBatchConverter {
 		Pattern pattern = Pattern.compile("^([0-9]+)$");
 		String[] spacesArgs = space.split(",");
 		for (String space1 : spacesArgs) {
+			space1 = space1.trim();
 			Matcher matcher = pattern.matcher(space1);
 			if (matcher.find()) {
 				String pageId = matcher.group(1);

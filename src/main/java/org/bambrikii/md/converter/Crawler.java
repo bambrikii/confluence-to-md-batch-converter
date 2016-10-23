@@ -35,6 +35,7 @@ public class Crawler {
 	private static final Logger logger = LoggerFactory.getLogger(Crawler.class);
 	public static final String ATTACHMENTS_PATTERN = "\\/download\\/attachments\\/([0-9]+)\\/([^\\?]+)\\?";
 	public static final String PAGES_PATTERN = "/pages/viewpage.action\\?pageId=([0-9]+)[^\\>]+\\>([^\\<]+)\\<";
+	private static final String SPACE_PATTERN = "\\/display\\/([^\\>\"]+).*\\>([^\\<]+)\\<";
 	private URL hostUrl;
 
 	private Set<String> processedLinks = new ConcurrentHashSet<>();
@@ -62,7 +63,7 @@ public class Crawler {
 		viewStorageTransformer = new ViewStorageTransformer(hostUrl, client);
 	}
 
-	private Map<String, String> download(String url) throws IOException, TransformerException, SAXException, ParserConfigurationException {
+	private PageLinks download(String url) throws IOException, TransformerException, SAXException, ParserConfigurationException {
 		HtmlPage page1 = client.getPage(url);
 		String pageContent = page1.getWebResponse().getContentAsString();
 		logger.info(pageContent);
@@ -85,15 +86,30 @@ public class Crawler {
 
 		// List the files and download them
 		downloadAttachments(pageContent);
+		Map<String, String> pageLinks1 = parseOutPageLinks(pageContent);
+		Map<String, String> spaceLinks1 = parseOutSpaceLinks(pageContent);
+		PageLinks pageLinks = new PageLinks(pageLinks1, spaceLinks1);
+		return pageLinks;
+	}
 
+	private Map<String, String> parseOutPageLinks(String pageContent) {
 		// List the pages and return them
-		Pattern pagesPattern = Pattern.compile(PAGES_PATTERN);
+		return parseOutLinksByPattern(pageContent, PAGES_PATTERN);
+	}
+
+	private Map<String, String> parseOutLinksByPattern(String pageContent, String pattern1) {
+		Pattern pagesPattern = Pattern.compile(pattern1);
 		Matcher pagesMatcher = pagesPattern.matcher(pageContent);
 		Map<String, String> links = new LinkedHashMap<>();
 		while (pagesMatcher.find()) {
 			links.put(pagesMatcher.group(1), pagesMatcher.group(2));
 		}
 		return links;
+	}
+
+	private Map<String, String> parseOutSpaceLinks(String pageContent) {
+		// List the spaces and return them
+		return parseOutLinksByPattern(pageContent, SPACE_PATTERN);
 	}
 
 	private void downloadAttachments(String pageContent) throws IOException {
@@ -125,15 +141,24 @@ public class Crawler {
 
 	public void downloadSpace(String space) throws IOException, ParserConfigurationException, TransformerException, SAXException {
 		String displayLink = createDisplayUrl(space);
-		Map<String, String> pageLinks = download(displayLink);
-		processedLinks.add(displayLink);
-		downloadPages2(pageLinks);
+		PageLinks links = download(displayLink);
+		processedLinks.add(space);
+		download(links);
 	}
 
-	public void downloadPages(Map<String, String> pageLinks) throws IOException, TransformerException, SAXException, ParserConfigurationException {
-		for (Map.Entry<String, String> entry : pageLinks.entrySet()) {
-			String pageId = entry.getKey();
-			downloadPage(pageId);
+	private void download(PageLinks links) throws IOException, TransformerException, SAXException, ParserConfigurationException {
+		downloadPages(links.getPageLinks());
+		downloadSpaces(links.getSpaceLinks());
+	}
+
+	private void downloadSpaces(Map<String, String> spaceLinks) throws ParserConfigurationException, TransformerException, SAXException, IOException {
+		processedLinks.forEach(link -> spaceLinks.remove(link));
+		if (spaceLinks.size() > 0) {
+			for (Map.Entry<String, String> entry : spaceLinks.entrySet()) {
+				String space = entry.getKey();
+				processedLinks.add(space);
+				downloadSpace(space);
+			}
 		}
 	}
 
@@ -141,28 +166,27 @@ public class Crawler {
 		String pageUrl = createPageUrl(pageId);
 		if (!checkProcessed(pageUrl)) {
 			try {
-				Map<String, String> childPages = download(pageUrl);
-				addProcessed(pageUrl);
-				downloadPages2(childPages);
+				PageLinks links = download(pageUrl);
+				processedLinks.add(pageId);
+				download(links);
 			} catch (FailingHttpStatusCodeException ex) {
 				logger.error(ex.getMessage(), ex);
 			}
 		}
 	}
 
-	private void downloadPages2(Map<String, String> childPages) throws IOException, TransformerException, SAXException, ParserConfigurationException {
-		processedLinks.forEach(childPages::remove);
+	private void downloadPages(Map<String, String> childPages) throws IOException, TransformerException, SAXException, ParserConfigurationException {
+		processedLinks.forEach((key) -> childPages.remove(key));
 		if (childPages.size() > 0) {
-			downloadPages(childPages);
+			for (Map.Entry<String, String> entry : childPages.entrySet()) {
+				String pageId = entry.getKey();
+				downloadPage(pageId);
+			}
 		}
 	}
 
 	private String createPageUrl(String pageId) {
 		return this.hostUrl.getProtocol() + "://" + this.hostUrl.getAuthority() + "/pages/viewpage.action?pageId=" + pageId;
-	}
-
-	private void addProcessed(String link) {
-		processedLinks.add(link);
 	}
 
 	private boolean checkProcessed(String link) {
