@@ -1,5 +1,6 @@
 package org.bambrikii.md.converter;
 
+import com.gargoylesoftware.htmlunit.ElementNotFoundException;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.Page;
 import com.gargoylesoftware.htmlunit.WebClient;
@@ -17,12 +18,14 @@ import javax.xml.transform.TransformerException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.bambrikii.md.converter.ViewStorageTransformer.CHARSET_NAME;
 import static org.bambrikii.md.converter.ViewStorageTransformer.transformViewStorage;
 
 /**
@@ -64,17 +67,21 @@ public class Crawler {
 		String pageContent = page1.getWebResponse().getContentAsString();
 		logger.info(pageContent);
 
-		// Fetch PageId
-		HtmlHiddenInput treePageId = page1.getElementByName("treePageId");
-		String pageId = treePageId.getValueAttribute();
+		try {
+			// Fetch PageId
+			HtmlHiddenInput treePageId = page1.getElementByName("treePageId");
+			String pageId = treePageId.getValueAttribute();
 
-		// Download page using ViewStorage plugin
-		String viewStorageContent = viewStorageTransformer.downloadViewStorage(pageId);
+			// Download page using ViewStorage plugin
+			String viewStorageContent = viewStorageTransformer.downloadViewStorage(pageId);
 
-		// Transform the page to MD format
-		String transformedStorageContent = transformViewStorage(viewStorageContent);
-		logger.info(transformedStorageContent);
-		persistor.persistPage(page1.getTitleText() + ".md", transformedStorageContent);
+			// Transform the page to MD format
+			String transformedStorageContent = transformViewStorage(viewStorageContent);
+			logger.info(transformedStorageContent);
+			persistor.persistPage(page1.getTitleText() + ".md", transformedStorageContent);
+		} catch (ElementNotFoundException ex) {
+			logger.error(ex.getMessage(), ex);
+		}
 
 		// List the files and download them
 		downloadAttachments(pageContent);
@@ -97,9 +104,13 @@ public class Crawler {
 			String name = attachmentsMatcher.group(2);
 			String attachmentUrl = createAttachmentUrl(id, name);
 
-			Page attachmentPage = client.getPage(attachmentUrl);
-			try (InputStream inputStream = attachmentPage.getWebResponse().getContentAsStream()) {
-				persistor.persistContent(name, inputStream);
+			try {
+				Page attachmentPage = client.getPage(attachmentUrl);
+				try (InputStream inputStream = attachmentPage.getWebResponse().getContentAsStream()) {
+					persistor.persistContent(URLDecoder.decode(name, CHARSET_NAME), inputStream);
+				}
+			} catch (FailingHttpStatusCodeException ex) {
+				logger.error(ex.getMessage(), ex);
 			}
 		}
 	}
@@ -121,15 +132,20 @@ public class Crawler {
 
 	public void downloadPages(Map<String, String> pageLinks) throws IOException, TransformerException, SAXException, ParserConfigurationException {
 		for (Map.Entry<String, String> entry : pageLinks.entrySet()) {
-			String pageUrl = createPageUrl(entry.getKey());
-			if (!checkProcessed(pageUrl)) {
-				try {
-					Map<String, String> childPages = download(pageUrl);
-					addProcessed(pageUrl);
-					downloadPages2(childPages);
-				} catch (FailingHttpStatusCodeException ex) {
-					logger.error(ex.getMessage(), ex);
-				}
+			String pageId = entry.getKey();
+			downloadPage(pageId);
+		}
+	}
+
+	public void downloadPage(String pageId) throws IOException, TransformerException, SAXException, ParserConfigurationException {
+		String pageUrl = createPageUrl(pageId);
+		if (!checkProcessed(pageUrl)) {
+			try {
+				Map<String, String> childPages = download(pageUrl);
+				addProcessed(pageUrl);
+				downloadPages2(childPages);
+			} catch (FailingHttpStatusCodeException ex) {
+				logger.error(ex.getMessage(), ex);
 			}
 		}
 	}

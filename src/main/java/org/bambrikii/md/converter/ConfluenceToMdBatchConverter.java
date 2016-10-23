@@ -9,8 +9,6 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,19 +45,18 @@ public class ConfluenceToMdBatchConverter {
 
 		Crawler crawler = new Crawler(hostUrl, StringUtils.defaultIfEmpty(targetDir, "MD"));
 		crawler.login(username, password);
-		Pattern pattern = Pattern.compile("([0-9]+)(,[0-9])?");
-		Map<String, String> pageIds = new HashMap<>();
-		Matcher matcher = pattern.matcher(space);
-		while (matcher.find()) {
-			String pageId = matcher.group(1);
-			pageIds.put(pageId, pageId);
-		}
-		if (pageIds.size() > 0) {
-			logger.info("Starting to download pages: " + pageIds.entrySet().stream().map(stringStringEntry -> stringStringEntry.getKey()).reduce((s, s2) -> s + s2));
-			crawler.downloadPages(pageIds);
-		} else {
-			logger.info("Starting to download space: " + space);
-			crawler.downloadSpace(space);
+		Pattern pattern = Pattern.compile("^([0-9]+)$");
+		String[] spacesArgs = space.split(",");
+		for (String space1 : spacesArgs) {
+			Matcher matcher = pattern.matcher(space1);
+			if (matcher.find()) {
+				String pageId = matcher.group(1);
+				logger.info("Starting to download page: " + pageId);
+				crawler.downloadPage(pageId);
+			} else {
+				logger.info("Starting to download space: " + space1);
+				crawler.downloadSpace(space1);
+			}
 		}
 	}
 }

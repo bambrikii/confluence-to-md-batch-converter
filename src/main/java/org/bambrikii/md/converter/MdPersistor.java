@@ -15,10 +15,10 @@ public class MdPersistor {
 
 	public MdPersistor(String dir) {
 		targetDir = new File(dir);
+		targetDir.mkdirs();
 	}
 
 	public void persistPage(String name, String content) throws IOException {
-		targetDir.mkdirs();
 		try (OutputStream os = new FileOutputStream(new File(targetDir, name.replaceAll("\\/", " - ")))) {
 			IOUtils.write(content, os, Charset.forName(CHARSET_NAME));
 		}
