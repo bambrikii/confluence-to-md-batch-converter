@@ -1,8 +1,8 @@
 package org.bambrikii.md.converter;
 
 import org.apache.commons.io.IOUtils;
-import org.bambrikii.md.converter.api.ConfluenceLogin1;
-import org.bambrikii.md.converter.api.Downloader;
+import org.bambrikii.md.converter.api.Transformable;
+import org.bambrikii.md.converter.impl.*;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -15,8 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 
-import static org.bambrikii.md.converter.ViewStorageTransformer.CHARSET_NAME;
-import static org.bambrikii.md.converter.ViewStorageTransformer.transformViewStorage;
+import static org.bambrikii.md.converter.impl.ViewStorageTransformer.CHARSET_NAME;
 
 /**
  * Created by Alexander Arakelyan on 22.10.16 14:51.
@@ -50,10 +49,21 @@ public class DownloadTest {
 	}
 
 	@Test
-	public void testTransform() throws IOException, TransformerException, SAXException, ParserConfigurationException {
+	public void testViewStorageTransform() throws IOException, TransformerException, SAXException, ParserConfigurationException {
 		try (InputStream is = DownloadTest.class.getResourceAsStream("/viewstoragecontent.xml")) {
 			String content = IOUtils.toString(is, CHARSET_NAME);
-			String content2 = transformViewStorage(content);
+			Transformable transformable = new ViewStorageTransformer(null);
+			String content2 = transformable.transformContent(content);
+			logger.debug(content2);
+		}
+	}
+
+	@Test
+	public void testHtmTransform() throws IOException, TransformerException, SAXException, ParserConfigurationException {
+		try (InputStream is = DownloadTest.class.getResourceAsStream("/sample-page.htm")) {
+			String content = IOUtils.toString(is, CHARSET_NAME);
+			Transformable transformable = new HtmTransformer();
+			String content2 = transformable.transformContent(content);
 			logger.debug(content2);
 		}
 	}

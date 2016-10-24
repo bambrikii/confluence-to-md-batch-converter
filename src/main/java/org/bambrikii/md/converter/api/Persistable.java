@@ -1,4 +1,4 @@
-package org.bambrikii.md.converter;
+package org.bambrikii.md.converter.api;
 
 import java.io.IOException;
 import java.io.InputStream;

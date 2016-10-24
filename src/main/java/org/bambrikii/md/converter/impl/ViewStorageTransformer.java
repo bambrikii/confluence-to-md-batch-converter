@@ -1,9 +1,13 @@
-package org.bambrikii.md.converter;
+package org.bambrikii.md.converter.impl;
 
 import com.gargoylesoftware.htmlunit.TextPage;
 import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.html.HtmlHiddenInput;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import net.sf.saxon.TransformerFactoryImpl;
 import org.apache.commons.io.IOUtils;
+import org.bambrikii.md.converter.Crawler;
+import org.bambrikii.md.converter.api.Transformable;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
@@ -36,6 +40,7 @@ public class ViewStorageTransformer implements Transformable {
 			+ " ]>"
 			+ "<ac:confluence xmlns:ac=\"http://www.atlassian.com/schema/confluence/4/ac/\" xmlns:ri=\"http://www.atlassian.com/schema/confluence/4/ri/\" xmlns=\"http://www.atlassian.com/schema/confluence/4/\">";
 	private static final String WRAPPER_BOTTOM = "</ac:confluence>";
+	public static final String TREE_PAGE_ID = "treePageId";
 
 	private final URL url;
 	private WebClient client;
@@ -49,7 +54,7 @@ public class ViewStorageTransformer implements Transformable {
 		this.client = client;
 	}
 
-	public static String transformViewStorage(String content) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+	public String transformContent(String content) throws ParserConfigurationException, IOException, SAXException, TransformerException {
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder builder = factory.newDocumentBuilder();
 		builder.setEntityResolver((publicId, systemId) -> {
@@ -62,7 +67,7 @@ public class ViewStorageTransformer implements Transformable {
 		org.w3c.dom.Document document = builder.parse(IOUtils.toInputStream(WRAPPER_TOP + content + WRAPPER_BOTTOM, Charset.forName(CHARSET_NAME)));
 		DOMSource source = new DOMSource(document);
 		TransformerFactory transformerFactory = TransformerFactoryImpl.newInstance(TransformerFactoryImpl.class.getName(), TransformerFactoryImpl.class.getClassLoader());
-		Transformer transformer = transformerFactory.newTransformer(new StreamSource(Crawler.class.getResourceAsStream("/xslt/c2md.xsl")));
+		Transformer transformer = transformerFactory.newTransformer(new StreamSource(Crawler.class.getResourceAsStream("/xslt/ac/c2md.xsl")));
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 		Result result = new StreamResult(outputStream);
 		transformer.transform(source, result);
@@ -70,12 +75,15 @@ public class ViewStorageTransformer implements Transformable {
 		return resultAsString;
 	}
 
-
 	@Override
-	public String downloadViewStorage(String pageId) throws IOException {
+	public String retrieveContent(HtmlPage page1) throws IOException {
+		// Fetch PageId
+		HtmlHiddenInput treePageId = page1.getElementByName(TREE_PAGE_ID);
+		String pageId = treePageId.getValueAttribute();
+
 		String url = this.url.getProtocol() + "://" + this.url.getAuthority() + "/plugins/viewstorage/viewpagestorage.action?pageId=" + pageId;
-		TextPage page1 = client.getPage(url);
-		return page1.getContent();
+		TextPage page2 = client.getPage(url);
+		return page2.getContent();
 	}
 
 }

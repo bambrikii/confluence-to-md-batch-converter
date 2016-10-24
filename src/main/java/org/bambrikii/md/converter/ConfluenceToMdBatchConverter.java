@@ -2,9 +2,11 @@ package org.bambrikii.md.converter;
 
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.StringUtils;
-import org.bambrikii.md.converter.api.ConfluenceLogin1;
-import org.bambrikii.md.converter.api.Downloadable;
-import org.bambrikii.md.converter.api.Downloader;
+import org.bambrikii.md.converter.api.*;
+import org.bambrikii.md.converter.impl.ConfluenceLogin1;
+import org.bambrikii.md.converter.impl.Downloader;
+import org.bambrikii.md.converter.impl.MdPersistor;
+import org.bambrikii.md.converter.impl.ViewStorageTransformer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;

@@ -1,9 +1,10 @@
-package org.bambrikii.md.converter.api;
+package org.bambrikii.md.converter.impl;
 
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlInput;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import org.bambrikii.md.converter.api.Loginable;
 
 import java.io.IOException;
 import java.net.URL;

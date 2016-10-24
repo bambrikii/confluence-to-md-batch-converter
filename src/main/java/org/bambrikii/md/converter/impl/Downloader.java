@@ -1,12 +1,15 @@
-package org.bambrikii.md.converter.api;
+package org.bambrikii.md.converter.impl;
 
 import com.gargoylesoftware.htmlunit.ElementNotFoundException;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.Page;
 import com.gargoylesoftware.htmlunit.WebClient;
-import com.gargoylesoftware.htmlunit.html.HtmlHiddenInput;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import org.bambrikii.md.converter.*;
+import org.bambrikii.md.converter.ConfluenceUrlBuilder;
+import org.bambrikii.md.converter.PageLinks;
+import org.bambrikii.md.converter.api.Downloadable;
+import org.bambrikii.md.converter.api.Persistable;
+import org.bambrikii.md.converter.api.Transformable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
@@ -22,8 +25,7 @@ import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.bambrikii.md.converter.ViewStorageTransformer.CHARSET_NAME;
-import static org.bambrikii.md.converter.ViewStorageTransformer.transformViewStorage;
+import static org.bambrikii.md.converter.impl.ViewStorageTransformer.CHARSET_NAME;
 
 /**
  * Created by Alexander Arakelyan on 23.10.16 21:22.
@@ -34,7 +36,6 @@ public class Downloader implements Downloadable {
 	private static final String SPACE_PATTERN = "\\/display\\/([^\\>\"]+).*\\>([^\\<]+)\\<";
 
 	private static final Logger logger = LoggerFactory.getLogger(Downloader.class);
-	public static final String TREE_PAGE_ID = "treePageId";
 	private WebClient client;
 	private final Transformable transformable;
 	private final Persistable persistor;
@@ -57,15 +58,11 @@ public class Downloader implements Downloadable {
 		logger.info(pageContent);
 
 		try {
-			// Fetch PageId
-			HtmlHiddenInput treePageId = page1.getElementByName(TREE_PAGE_ID);
-			String pageId = treePageId.getValueAttribute();
-
 			// Download page using ViewStorage plugin
-			String viewStorageContent = transformable.downloadViewStorage(pageId);
+			String viewStorageContent = transformable.retrieveContent(page1);
 
 			// Transform the page to MD format
-			String transformedStorageContent = transformViewStorage(viewStorageContent);
+			String transformedStorageContent = transformable.transformContent(viewStorageContent);
 			logger.info(transformedStorageContent);
 			persistor.persistPage(page1.getTitleText() + ".md", transformedStorageContent);
 		} catch (ElementNotFoundException ex) {

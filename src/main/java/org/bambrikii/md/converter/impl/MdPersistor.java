@@ -1,11 +1,12 @@
-package org.bambrikii.md.converter;
+package org.bambrikii.md.converter.impl;
 
 import org.apache.commons.io.IOUtils;
+import org.bambrikii.md.converter.api.Persistable;
 
 import java.io.*;
 import java.nio.charset.Charset;
 
-import static org.bambrikii.md.converter.ViewStorageTransformer.CHARSET_NAME;
+import static org.bambrikii.md.converter.impl.ViewStorageTransformer.CHARSET_NAME;
 
 /**
  * Created by Alexander Arakelyan on 22.10.16 19:29.
