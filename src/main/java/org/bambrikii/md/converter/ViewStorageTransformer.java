@@ -25,7 +25,7 @@ import java.nio.charset.Charset;
 /**
  * Created by Alexander Arakelyan on 22.10.16 19:20.
  */
-public class ViewStorageTransformer {
+public class ViewStorageTransformer implements Transformable {
 	public static final String CHARSET_NAME = "UTF-8";
 	private static final String WRAPPER_TOP = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
 			+ "<!DOCTYPE ac:confluence SYSTEM \"dtd/confluence-all.dtd\" [ "
@@ -38,13 +38,16 @@ public class ViewStorageTransformer {
 	private static final String WRAPPER_BOTTOM = "</ac:confluence>";
 
 	private final URL url;
-	private final WebClient client;
+	private WebClient client;
 
-	public ViewStorageTransformer(URL url, WebClient client) {
+	public ViewStorageTransformer(URL url) {
 		this.url = url;
-		this.client = client;
 	}
 
+	@Override
+	public void setWebClient(WebClient client) {
+		this.client = client;
+	}
 
 	public static String transformViewStorage(String content) throws ParserConfigurationException, IOException, SAXException, TransformerException {
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -68,6 +71,7 @@ public class ViewStorageTransformer {
 	}
 
 
+	@Override
 	public String downloadViewStorage(String pageId) throws IOException {
 		String url = this.url.getProtocol() + "://" + this.url.getAuthority() + "/plugins/viewstorage/viewpagestorage.action?pageId=" + pageId;
 		TextPage page1 = client.getPage(url);

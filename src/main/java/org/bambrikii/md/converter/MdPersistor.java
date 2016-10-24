@@ -10,7 +10,7 @@ import static org.bambrikii.md.converter.ViewStorageTransformer.CHARSET_NAME;
 /**
  * Created by Alexander Arakelyan on 22.10.16 19:29.
  */
-public class MdPersistor {
+public class MdPersistor implements Persistable {
 	private File targetDir;
 
 	public MdPersistor(String dir) {
@@ -18,12 +18,14 @@ public class MdPersistor {
 		targetDir.mkdirs();
 	}
 
+	@Override
 	public void persistPage(String name, String content) throws IOException {
 		try (OutputStream os = new FileOutputStream(new File(targetDir, name.replaceAll("\\/", " - ")))) {
 			IOUtils.write(content, os, Charset.forName(CHARSET_NAME));
 		}
 	}
 
+	@Override
 	public void persistContent(String name, InputStream content) throws IOException {
 		try (OutputStream os = new FileOutputStream(new File(targetDir, name))) {
 			IOUtils.copy(content, os);

@@ -1,6 +1,8 @@
 package org.bambrikii.md.converter;
 
 import org.apache.commons.io.IOUtils;
+import org.bambrikii.md.converter.api.ConfluenceLogin1;
+import org.bambrikii.md.converter.api.Downloader;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -11,6 +13,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 
 import static org.bambrikii.md.converter.ViewStorageTransformer.CHARSET_NAME;
 import static org.bambrikii.md.converter.ViewStorageTransformer.transformViewStorage;
@@ -36,8 +39,13 @@ public class DownloadTest {
 
 	@Test
 	public void testDownload() throws IOException, TransformerException, ParserConfigurationException, SAXException {
-		Crawler crawler = new Crawler(hostUrl, "target");
-		crawler.login(username, password);
+		URL hostUrl = new URL(this.hostUrl);
+		Transformable transformable = new ViewStorageTransformer(hostUrl);
+		ConfluenceUrlBuilder urlBuilder = new ConfluenceUrlBuilder(hostUrl);
+		MdPersistor destDir = new MdPersistor("destDir");
+		Downloader downloader = new Downloader(transformable, destDir, urlBuilder);
+		Crawler crawler = new Crawler(this.hostUrl, downloader, urlBuilder);
+		crawler.login(new ConfluenceLogin1(username, password));
 		crawler.downloadSpace(space);
 	}
 

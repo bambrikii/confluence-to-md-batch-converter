@@ -2,9 +2,8 @@ package org.bambrikii.md.converter;
 
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;
-import com.gargoylesoftware.htmlunit.html.HtmlForm;
-import com.gargoylesoftware.htmlunit.html.HtmlInput;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import org.bambrikii.md.converter.api.Downloadable;
+import org.bambrikii.md.converter.api.Loginable;
 import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,30 +24,23 @@ public class Crawler {
 
 	private Set<String> processedLinks = new ConcurrentHashSet<>();
 	private WebClient client;
-	private Downloader downloader;
+	private final Downloadable downloader;
 	private final String dstDir;
 	private final ConfluenceUrlBuilder urlBuilder;
 
-	public Crawler(String hostUrl, String dstDir) throws IOException {
-		urlBuilder = new ConfluenceUrlBuilder(new URL(hostUrl));
+	public Crawler(String dstDir, Downloadable downloader, ConfluenceUrlBuilder urlBuilder) throws IOException {
+		this.urlBuilder = urlBuilder;
 		this.dstDir = dstDir;
+		this.downloader = downloader;
 	}
 
-	public void login(String username, String password) throws IOException {
+	public void login(Loginable loginable) throws IOException {
 		URL logonUrl = new URL(urlBuilder.createLogonUrl());
 		client = new WebClient();
 		client.getOptions().setThrowExceptionOnScriptError(false);
-		HtmlPage page = client.getPage(logonUrl);
-		HtmlForm loginForm = page.getFormByName("loginform");
-		HtmlInput uname = loginForm.getInputByName("os_username");
-		uname.setValueAttribute(username);
-		HtmlInput pwd = loginForm.getInputByName("os_password");
-		pwd.setValueAttribute(password);
-		HtmlInput btn = loginForm.getInputByName("login");
-		btn.click();
+		loginable.login(client, logonUrl);
 
-		ViewStorageTransformer viewStorageTransformer = new ViewStorageTransformer(urlBuilder.getBaseUrl(), client);
-		downloader = new Downloader(client, viewStorageTransformer, urlBuilder, dstDir);
+		downloader.setClient(client);
 	}
 
 	public void downloadSpace(String space) throws IOException, ParserConfigurationException, TransformerException, SAXException {

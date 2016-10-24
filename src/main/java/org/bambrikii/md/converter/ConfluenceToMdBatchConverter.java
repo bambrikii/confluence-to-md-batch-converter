@@ -2,6 +2,9 @@ package org.bambrikii.md.converter;
 
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.StringUtils;
+import org.bambrikii.md.converter.api.ConfluenceLogin1;
+import org.bambrikii.md.converter.api.Downloadable;
+import org.bambrikii.md.converter.api.Downloader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
@@ -9,6 +12,7 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 import java.io.IOException;
+import java.net.URL;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,9 +46,16 @@ public class ConfluenceToMdBatchConverter {
 		String hostUrl = cmd.getOptionValue(HOST_URL);
 		String space = cmd.getOptionValue(CONFLUENCE_SPACE);
 		String targetDir = cmd.getOptionValue(TARGET_DIR);
+		String dstDir = StringUtils.defaultIfEmpty(targetDir, "MD");
 
-		Crawler crawler = new Crawler(hostUrl, StringUtils.defaultIfEmpty(targetDir, "MD"));
-		crawler.login(username, password);
+		ConfluenceUrlBuilder urlBuilder = new ConfluenceUrlBuilder(new URL(hostUrl));
+		Transformable transformable = new ViewStorageTransformer(urlBuilder.getBaseUrl());
+		Persistable persistor = new MdPersistor(dstDir);
+		Downloadable downloader = new Downloader(transformable, persistor, urlBuilder);
+
+		Crawler crawler = new Crawler(dstDir, downloader, urlBuilder);
+
+		crawler.login(new ConfluenceLogin1(username, password));
 		Pattern pattern = Pattern.compile("^([0-9]+)$");
 		String[] spacesArgs = space.split(",");
 		for (String space1 : spacesArgs) {

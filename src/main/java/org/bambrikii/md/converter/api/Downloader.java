@@ -1,4 +1,4 @@
-package org.bambrikii.md.converter;
+package org.bambrikii.md.converter.api;
 
 import com.gargoylesoftware.htmlunit.ElementNotFoundException;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
@@ -6,6 +6,7 @@ import com.gargoylesoftware.htmlunit.Page;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlHiddenInput;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import org.bambrikii.md.converter.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
@@ -27,26 +28,30 @@ import static org.bambrikii.md.converter.ViewStorageTransformer.transformViewSto
 /**
  * Created by Alexander Arakelyan on 23.10.16 21:22.
  */
-public class Downloader {
+public class Downloader implements Downloadable {
 	public static final String ATTACHMENTS_PATTERN = "\\/download\\/attachments\\/([0-9]+)\\/([^\\?]+)\\?";
 	public static final String PAGES_PATTERN = "/pages/viewpage.action\\?pageId=([0-9]+)[^\\>]+\\>([^\\<]+)\\<";
 	private static final String SPACE_PATTERN = "\\/display\\/([^\\>\"]+).*\\>([^\\<]+)\\<";
 
 	private static final Logger logger = LoggerFactory.getLogger(Downloader.class);
 	public static final String TREE_PAGE_ID = "treePageId";
-	private final WebClient client;
-	private final ViewStorageTransformer viewStorageTransformer;
-	private final MdPersistor persistor;
+	private WebClient client;
+	private final Transformable transformable;
+	private final Persistable persistor;
 	private final ConfluenceUrlBuilder urlBuilder;
 
-	public Downloader(WebClient client, ViewStorageTransformer viewStorageTransformer, ConfluenceUrlBuilder urlBuilder, String dstDir) {
-		this.client = client;
-		this.viewStorageTransformer = viewStorageTransformer;
-		this.persistor = new MdPersistor(dstDir);
+	public Downloader(Transformable transformable, Persistable persistor, ConfluenceUrlBuilder urlBuilder) {
+		this.transformable = transformable;
+		this.persistor = persistor;
 		this.urlBuilder = urlBuilder;
 	}
 
-	PageLinks download(String url) throws IOException, TransformerException, SAXException, ParserConfigurationException {
+	public void setClient(WebClient client) {
+		this.client = client;
+		this.transformable.setWebClient(client);
+	}
+
+	public PageLinks download(String url) throws IOException, TransformerException, SAXException, ParserConfigurationException {
 		HtmlPage page1 = client.getPage(url);
 		String pageContent = page1.getWebResponse().getContentAsString();
 		logger.info(pageContent);
@@ -57,7 +62,7 @@ public class Downloader {
 			String pageId = treePageId.getValueAttribute();
 
 			// Download page using ViewStorage plugin
-			String viewStorageContent = viewStorageTransformer.downloadViewStorage(pageId);
+			String viewStorageContent = transformable.downloadViewStorage(pageId);
 
 			// Transform the page to MD format
 			String transformedStorageContent = transformViewStorage(viewStorageContent);
