@@ -67,7 +67,6 @@ public class Crawler {
 		if (spaceLinks.size() > 0) {
 			for (Map.Entry<String, String> entry : spaceLinks.entrySet()) {
 				String space = entry.getKey();
-				processedLinks.add(space);
 				downloadSpace(space);
 			}
 		}
