@@ -51,7 +51,7 @@ public class HtmTransformer implements Transformable {
 	public String transformContent(String content) throws ParserConfigurationException, IOException, SAXException, TransformerException {
 		Document doc = Jsoup.parse(content);
 		doc.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
-		Elements main = doc.select("div#main-content");
+		Elements main = doc.select("div#main-content div");
 		content = main.html();
 		content = WRAPPER_TOP + content + WRAPPER_BOTTOM;
 		Tidy tidy = new Tidy();
