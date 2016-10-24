@@ -3,11 +3,11 @@
 
 	<xsl:output method="text"/>
 
-	<xsl:template match="@*|node()" priority="-1">
-		<xsl:copy>
-			<xsl:apply-templates select="@*|node()"/>
-		</xsl:copy>
-	</xsl:template>
+	<!--<xsl:template match="@*|node()" priority="-1">-->
+		<!--<xsl:copy>-->
+			<!--<xsl:apply-templates select="@*|node()"/>-->
+		<!--</xsl:copy>-->
+	<!--</xsl:template>-->
 
 	<xsl:template match="text()">
 		<xsl:if test="normalize-space(.) != ''">
